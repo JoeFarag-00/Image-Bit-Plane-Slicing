@@ -58,21 +58,25 @@ class BitPlaneSlicing:
         self.image_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg;*.jpeg;*.png;*.bmp;*.gif")])
         
         if self.image_path:
-            self.image = Image.open(self.image_path).convert("L")
-            self.image = self.image.resize((550, 550))
-            self.photo = ImageTk.PhotoImage(self.image)
-            self.image_display = Label(self.LoadImg_Frame, image=self.photo)
+            self.Original_image = Image.open(self.image_path).convert("L")
+            self.Original_image = self.Original_image.resize((550, 550))
+            self.photo = ImageTk.PhotoImage(self.Original_image)
+            self.image_display = Label(self.LoadImg_Frame)
             self.image_display.pack()
+            self.image_display.config(image=self.photo)
             self.slice_button.config(state=NORMAL)
     
     def slice_image(self):
-        Bit_List = np.array(self.image)
+        self.Bit_List = np.array(self.Original_image)
         self.Bit_Planes_List = []
+        self.Bit_Recon_List = []
         for i in range(8):
-            self.plane = cv2.bitwise_and(Bit_List, 2**i)
-            # self.plane = self.plane.astype(np.uint8)
-            self.Bit_Planes_List.append(Image.fromarray(self.plane))
-   
+            self.plane = np.bitwise_and(self.Bit_List, 2**i)
+            self.plane = self.plane.astype(np.uint8)
+            # print("Plane",i,":\n",self.plane)
+            self.Bit_Recon_List.append(self.plane) 
+            self.Bit_Planes_List.append(Image.fromarray(self.plane)) 
+        
         drive_me = 7
         for i in range(2):
             for c in range(4):
@@ -88,34 +92,23 @@ class BitPlaneSlicing:
             self.reconstruct_button.config(state=NORMAL)
 
     def reconstruct_image(self):
+        
         ReConst_List = []
         for i in range(8):
             if self.plane_checkboxes[i].var.get():
-                ReConst_List.append(self.Bit_Planes_List[i])
-
-        # print(type(ReConst_List))
-        # print(type(self.planes))
+                ReConst_List.append(i)
         
-        ReCon_Img = sum(ReConst_List)
+        if(len(ReConst_List)>0):       
+            shingshong = np.copy(self.Bit_Recon_List[ReConst_List[0]])
+            for i in range(1,len(ReConst_List)):
+                shingshong+=np.copy(self.Bit_Recon_List[ReConst_List[i]])
+            resimg = Image.fromarray(shingshong)
+            resimg = resimg.resize((550,550))
+            photo = ImageTk.PhotoImage(resimg)
+            self.image_display.image = photo
+            self.image_display.config(image=photo)
+            
         
-        photo = ImageTk.PhotoImage(ReCon_Img)
-        self.image_display.config(image=photo)
-        self.image_display.image = photo
-        
-        # ReConst_List = []
-        # for i in range(8):
-        #     if self.plane_checkboxes[i].var.get():
-        #         ReConst_List.append(i)
-        
-        # array = np.zeros_like(np.array(self.image))
-        # for i in ReConst_List:
-        #     array += cv2.bitwise_and(np.array(self.image), 2**i)
-        # array = (array * 255 / (2**len(ReConst_List) - 1)).astype(np.uint8)
-        # image = Image.fromarray(array)
-        
-        # photo = ImageTk.PhotoImage(image)
-        # self.image_display.config(image=photo)
-        # self.image_display.image = photo
     
     def ResetWindow(self):
         root.destroy()
